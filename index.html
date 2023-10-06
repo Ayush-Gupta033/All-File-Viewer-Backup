@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>All File Viewer</title>
+    <link rel="stylesheet" href="css/styles.css" />
+
+    <link rel="stylesheet" href="./css/pptxjs.css" />
+    <link rel="stylesheet" href="./css/nv.d3.min.css" />
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"
+      integrity="sha512-r22gChDnGvBylk90+2e/ycr3RVrDi8DIOkIGNhJlKfuyQM4tIRAI062MaV8sfjQKYVGjOBaZBOA87z+IhZE9DA=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    ></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+
+    <script type="text/javascript" src="./js/jquery-1.11.3.min.js"></script>
+    <script type="text/javascript" src="./js/jszip.min.js"></script>
+    <script type="text/javascript" src="./js/filereader.js"></script>
+    <script type="text/javascript" src="./js/d3.min.js"></script>
+    <script type="text/javascript" src="./js/nv.d3.min.js"></script>
+    <script type="text/javascript" src="./js/pptxjs.js"></script>
+    <script type="text/javascript" src="./js/divs2slides.js"></script>
+
+    <script type="text/javascript" src="./js/jquery.fullscreen-min.js"></script>
+
+    <!-- <script src="https://unpkg.com/promise-polyfill/dist/polyfill.min.js"></script>
+    <script src="https://unpkg.com/jszip/dist/jszip.min.js"></script>
+    <script src="docx-preview.min.js"></script> -->
+  </head>
+  <body>
+    <h1>All File Viewer</h1>
+    <p><i> csv, xml, xls, xlsx, pptx, docx </i></p>
+    <form>
+      <input
+        type="file"
+        id="excelFile"
+        accept=".xls, .xlsx, .csv, .xml, .pptx, .docx, .doc"
+      />
+    </form>
+    <div id="sheetSelectorWrapper" style="display: none">
+      <label for="sheetSelector">Switch Sheet: </label>
+      <select id="sheetSelector"></select>
+    </div>
+    <div id="excelData">
+      <!-- Add a wrapper for the content -->
+      <div class="excel-table"></div>
+    </div>
+
+    <script src="js/xlsx.full.min.js"></script>
+    <script>
+      document
+        .querySelector("#excelFile")
+        .addEventListener("change", handleFile);
+
+      function handleFile(event) {
+        const file = event.target.files[0];
+        console.log(file);
+        if (!file) return;
+        const fileExtension = getFileExtension(file.name);
+
+        const reader = new FileReader();
+
+        reader.onload = function (e) {
+          const data = e.target.result;
+          console.log("🚀", fileExtension);
+          if (fileExtension === "xlsx" || fileExtension === "xls") {
+            handleExcelFile(data);
+          } else if (fileExtension === "csv") {
+            handleCSVFile(data);
+          } else if (fileExtension === "xml") {
+            handleXMLFile(data);
+          } else if (fileExtension === "pptx") {
+            console.log("pptx file uploaded");
+            handlePPTXFile(data);
+          } else if (fileExtension === "docx") {
+            console.log("docx or doc file uploaded");
+            handleDOCXFile(data);
+            // handleDOCXFileViaMammoth(data);
+          } else {
+            alert(
+              "Unsupported file type. Please upload an Excel, CSV, or XML file."
+            );
+          }
+        };
+
+        if (
+          fileExtension === "docx" ||
+          fileExtension === "doc" ||
+          fileExtension === "xls" ||
+          fileExtension === "xlsx"
+        ) {
+          reader.readAsArrayBuffer(file);
+        } else if (fileExtension === "pptx") {
+          reader.readAsBinaryString(file);
+        } else {
+          reader.readAsText(file);
+        }
+      }
+
+      function getFileExtension(filename) {
+        return filename.split(".").pop().toLowerCase();
+      }
+
+      function handlePPTXFile(data) {
+        $("#excelData").pptxToHtml({
+          fileInputId: "excelFile",
+          slideMode: false,
+          keyBoardShortCut: false,
+          slideModeConfig: {
+            //on slide mode (slideMode: true)
+            first: 1,
+            nav: false /** true,false : show or not nav buttons*/,
+            navTxtColor: "white" /** color */,
+            navNextTxt: "&#8250;", //">"
+            navPrevTxt: "&#8249;", //"<"
+            showPlayPauseBtn: false /** true,false */,
+            keyBoardShortCut: false /** true,false */,
+            showSlideNum: false /** true,false */,
+            showTotalSlideNum: false /** true,false */,
+            autoSlide: false /** false or seconds (the pause time between slides) , F8 to active(keyBoardShortCut: true) */,
+            randomAutoSlide: false /** true,false ,autoSlide:true */,
+            loop: false /** true,false */,
+            background: "black" /** false or color*/,
+            transition:
+              "default" /** transition type: "slid","fade","default","random" , to show transition efects :transitionTime > 0.5 */,
+            transitionTime: 1 /** transition time in seconds */,
+          },
+        });
+      }
+
+      function handleDOCFile(data) {
+        mammoth
+          .convertToHtml({ arrayBuffer: data })
+          .then((result) => {
+            document.querySelector("#excelData").innerHTML = result.value;
+          })
+          .catch((error) => {
+            console.error("Error converting DOCX to HTML:", error);
+          });
+      }
+      function handleDOCXFile(data) {
+        var container = document.getElementById("excelData");
+        console.log("here");
+        docx
+          .renderAsync(data, container)
+          .then(function () {
+            console.log("DOCX rendering finished");
+          })
+          .catch(function (error) {
+            console.error("Error rendering DOCX:", error);
+          });
+      }
+
+      function handleExcelFile(data) {
+        const workbook = XLSX.read(data, { type: "binary" });
+
+        const sheetSelector = document.querySelector("#sheetSelector");
+        sheetSelector.innerHTML = ""; // Clear the existing options
+
+        workbook.SheetNames.forEach((sheetName) => {
+          // Add each sheet as an option in the dropdown
+          const option = document.createElement("option");
+          option.value = sheetName;
+          option.textContent = sheetName;
+          sheetSelector.appendChild(option);
+        });
+
+        // Handle sheet selection change
+        sheetSelector.addEventListener("change", function () {
+          const selectedSheet = sheetSelector.value;
+          const worksheet = workbook.Sheets[selectedSheet];
+          const excelData = XLSX.utils.sheet_to_html(worksheet);
+
+          // Display the HTML table within the wrapper with border styles
+          document.querySelector(".excel-table").innerHTML = excelData;
+        });
+
+        // Load the first sheet initially
+        const initialSheetName = workbook.SheetNames[0];
+        const initialWorksheet = workbook.Sheets[initialSheetName];
+        const initialExcelData = XLSX.utils.sheet_to_html(initialWorksheet);
+
+        // Display the HTML table within the wrapper with border styles
+        document.querySelector(".excel-table").innerHTML = initialExcelData;
+        document.querySelector("#sheetSelectorWrapper").style.display = "block";
+      }
+
+      function handleCSVFile(data) {
+        const lines = data.split("\n");
+        const table = document.createElement("table");
+        table.classList.add("excel-table");
+
+        // Create a table header
+        const headerRow = document.createElement("tr");
+        const headerColumns = lines[0].split(",");
+        headerColumns.forEach((column) => {
+          const th = document.createElement("th");
+          th.textContent = column;
+          headerRow.appendChild(th);
+        });
+        table.appendChild(headerRow);
+
+        // Create table rows for data
+        for (let i = 1; i < lines.length; i++) {
+          const rowData = lines[i].split(",");
+          const row = document.createElement("tr");
+          rowData.forEach((cell) => {
+            const td = document.createElement("td");
+            td.textContent = cell;
+            row.appendChild(td);
+          });
+          table.appendChild(row);
+        }
+
+        // Clear the existing content and append the table
+        const excelTable = document.querySelector(".excel-table");
+        excelTable.innerHTML = "";
+        excelTable.appendChild(table);
+      }
+
+      function handleXMLFile(data) {
+        // Parse XML data
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(data, "text/xml");
+        const xmlTable = document.createElement("table");
+        xmlTable.classList.add("excel-table");
+
+        // Create table header
+        const tableHeader = document.createElement("thead");
+        const headerRow = document.createElement("tr");
+
+        // Add headers based on the first child element
+        const firstChild = xmlDoc.documentElement.firstElementChild;
+        if (firstChild) {
+          for (const child of firstChild.children) {
+            const headerCell = document.createElement("th");
+            headerCell.textContent = child.nodeName;
+            headerRow.appendChild(headerCell);
+          }
+          tableHeader.appendChild(headerRow);
+        }
+
+        // Create table body
+        const tableBody = document.createElement("tbody");
+        for (const node of xmlDoc.documentElement.children) {
+          const row = document.createElement("tr");
+          for (const child of node.children) {
+            const cell = document.createElement("td");
+            cell.textContent = child.textContent;
+            row.appendChild(cell);
+          }
+          tableBody.appendChild(row);
+        }
+
+        xmlTable.appendChild(tableHeader);
+        xmlTable.appendChild(tableBody);
+
+        // Display the HTML table within the wrapper with border styles
+        document.querySelector(".excel-table").innerHTML = "";
+        document.querySelector(".excel-table").appendChild(xmlTable);
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Excel Viewer</title>
+    <link rel="stylesheet" href="css/styles.css" />
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"
+      integrity="sha512-r22gChDnGvBylk90+2e/ycr3RVrDi8DIOkIGNhJlKfuyQM4tIRAI062MaV8sfjQKYVGjOBaZBOA87z+IhZE9DA=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    ></script>
+  </head>
+  <body>
+    <h1>Excel Viewer</h1>
+    <form>
+      <input type="file" id="excelFile" accept=".xls, .xlsx, .xml" />
+    </form>
+    <div>
+      <label for="sheetSelector">Select a sheet: </label>
+      <select id="sheetSelector"></select>
+    </div>
+    <div id="excelData">
+      <!-- Add a wrapper for the table to apply border styles -->
+      <table class="excel-table"></table>
+    </div>
+
+    <script src="js/xlsx.full.min.js"></script>
+    <script>
+      document
+        .querySelector("#excelFile")
+        .addEventListener("change", handleFile);
+
+      function handleFile(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+
+        reader.onload = function (e) {
+          const data = e.target.result;
+          const workbook = XLSX.read(data, { type: "binary" });
+
+          const sheetSelector = document.querySelector("#sheetSelector");
+          sheetSelector.innerHTML = ""; // Clear the existing options
+
+          workbook.SheetNames.forEach((sheetName) => {
+            // Add each sheet as an option in the dropdown
+            const option = document.createElement("option");
+            option.value = sheetName;
+            option.textContent = sheetName;
+            sheetSelector.appendChild(option);
+          });
+
+          // Handle sheet selection change
+          sheetSelector.addEventListener("change", function () {
+            const selectedSheet = sheetSelector.value;
+            const worksheet = workbook.Sheets[selectedSheet];
+            const excelData = XLSX.utils.sheet_to_html(worksheet);
+
+            // Display the HTML table within the wrapper with border styles
+            document.querySelector(".excel-table").innerHTML = excelData;
+          });
+
+          // Load the first sheet initially
+          const initialSheetName = workbook.SheetNames[0];
+          const initialWorksheet = workbook.Sheets[initialSheetName];
+          const initialExcelData = XLSX.utils.sheet_to_html(initialWorksheet);
+
+          // Display the HTML table within the wrapper with border styles
+          document.querySelector(".excel-table").innerHTML = initialExcelData;
+        };
+
+        reader.readAsBinaryString(file);
+      }
+    </script>
+  </body>
+</html>
